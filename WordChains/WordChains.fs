@@ -1,11 +1,13 @@
 ﻿module WordChains
 
+//TODO - remove mutable state and make this a parameter passed between function calls
+let mutable deadEndWords:Set<string> = Set.empty
+
 let replaceNthChar n c (str:string) =
         let chars = str.ToCharArray()
         chars.[n]  <- c
         System.String(chars)
 
-//TODO - keep track of all paths taken so far
 let generateNextCandidates (input:string) (target:string) (pathSoFar:string list) dictionary =
     let isValidChoice candidate =
         dictionary |> Set.contains candidate 
@@ -49,15 +51,21 @@ let getFirstShortestPath  dictionary (input:string) (target:string) =
         invalidArg("target") "Target word not isn't present in the dictionary"
 
     let rec getFirstShortestPathInner (pathSoFar:string list) (input:string) =
-        //printfn "%A" pathSoFar
-        if(input = target) then
-            pathSoFar
-        else
-            let candidates = dictionary |> generateNextCandidates input target pathSoFar
-            let firstMatchingPathOrEmpty = 
-                candidates 
-                |> firstNonEmptyMappedSeqOrEmptyIfNone ( fun c -> getFirstShortestPathInner (c :: pathSoFar) c |> Seq.ofList)
-            firstMatchingPathOrEmpty |> List.ofSeq
+            if(deadEndWords |> Set.contains input) then
+                printfn "%s: Recognizing dead end, skipping" input
+                List.empty
+            else
+                printfn "(Length %d) %A" (pathSoFar |> List.length) pathSoFar
+                if(input = target) then
+                    pathSoFar
+                else
+                    let candidates = dictionary |> generateNextCandidates input target pathSoFar
+                    let firstMatchingPathOrEmpty = 
+                        candidates 
+                        |> firstNonEmptyMappedSeqOrEmptyIfNone ( fun c -> getFirstShortestPathInner (c :: pathSoFar) c |> Seq.ofList)
+                    if(firstMatchingPathOrEmpty |> Seq.isEmpty) then
+                        deadEndWords <- (deadEndWords + set(candidates))
+                    firstMatchingPathOrEmpty |> List.ofSeq
 
     getFirstShortestPathInner [input] input
     |> List.rev
