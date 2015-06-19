@@ -1,8 +1,5 @@
 ﻿module WordChains
 
-//TODO - remove mutable state and make this a parameter passed between function calls
-let mutable deadEndWords:Set<string> = Set.empty
-
 let replaceNthChar n c (str:string) =
         let chars = str.ToCharArray()
         chars.[n]  <- c
@@ -50,8 +47,11 @@ let getFirstShortestPath  dictionary (input:string) (target:string) =
     if(dictionary |> Set.contains target |> not) then
         invalidArg("target") "Target word not isn't present in the dictionary"
 
+    //TODO - remove mutable state and make this an 'accumulator' parameter
+    let deadEndWords:Set<string> ref = ref Set.empty
+
     let rec getFirstShortestPathInner (pathSoFar:string list) (input:string) =
-            if(deadEndWords |> Set.contains input) then
+            if(!deadEndWords |> Set.contains input) then
                 printfn "%s: Recognizing dead end, skipping" input
                 List.empty
             else
@@ -64,7 +64,7 @@ let getFirstShortestPath  dictionary (input:string) (target:string) =
                         candidates 
                         |> firstNonEmptyMappedSeqOrEmptyIfNone ( fun c -> getFirstShortestPathInner (c :: pathSoFar) c |> Seq.ofList)
                     if(firstMatchingPathOrEmpty |> Seq.isEmpty) then
-                        deadEndWords <- (deadEndWords + set(candidates))
+                        deadEndWords := (!deadEndWords + set(candidates))
                     firstMatchingPathOrEmpty |> List.ofSeq
 
     getFirstShortestPathInner [input] input
